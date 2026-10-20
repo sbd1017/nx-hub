@@ -1,0 +1,49 @@
+[Unit]
+Description=NX Hub - Switch automation gateway
+Documentation=https://github.com/sbd1017/nx-hub/blob/main/docs/RASPBERRY-PI.md
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=exec
+ExecStart=/opt/nxhub/nxhub
+WorkingDirectory=/opt/nxhub
+Restart=on-failure
+RestartSec=5
+# Gives the session time to release held controller inputs before exit.
+TimeoutStopSec=15
+
+# Data (SQLite database, admin token) lives in /var/lib/nxhub, exposed as $STATE_DIRECTORY.
+DynamicUser=yes
+StateDirectory=nxhub
+StateDirectoryMode=0700
+
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=DOTNET_CLI_TELEMETRY_OPTOUT=1
+Environment=DOTNET_gcServer=0
+# Listen address. Default is all interfaces on 8080 so phones on the LAN can reach it.
+# Environment=Urls=http://0.0.0.0:8080
+
+# Hardening: NX Hub needs only outbound TCP to the Switch and an inbound HTTP port.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+CapabilityBoundingSet=
+SystemCallArchitectures=native
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

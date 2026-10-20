@@ -1,0 +1,102 @@
+# Handover
+
+Read this first if you are picking up NX Hub as a maintainer or contributor. Keep it current: update it in
+the same change whenever a decision is made or the state changes.
+
+_Last updated: 2026-10-20._
+
+## What NX Hub is
+
+A Raspberry-Pi-first, self-hosted, **game-agnostic** automation gateway for CFW Nintendo Switch
+consoles running sys-botbase. It exposes a web UI, a REST API (OpenAPI) and WebSocket events.
+Game-specific features (Pokémon first) are future plugins, never Core.
+
+## Current state
+
+| Area | State |
+| --- | --- |
+| Protocol client (`NxHub.Protocol`) | Done. TCP, CRLF, timeouts, connection poisoning, capability inference (2.x / cpp 3.x), `pixelPeek`. |
+| Sessions (`SwitchSession`) | Done. Supervisor loop, heartbeat, backoff with jitter, reconnect, clean shutdown. |
+| Controller | Done. Press/hold/release/stick/release-all/reset, watchdogs, neutralise on reconnect. |
+| Macros | Done. Steps (press, hold, release, stick, wait, nested repeat), repeat/loop, one run per Switch, pause/resume/stop, released on end. UI recorder + editor. |
+| Live view | Done. Shared, deduplicated `pixelPeek` frames; clear 422 when a console returns no image. |
+| Diagnostics | Done. 10 checks, READY/DEGRADED/NOT READY. |
+| Demo mode | Done. In-process simulator with an interactive pretend menu, in-memory, read-only, no login. |
+| Storage | SQLite: `switches` (v1), `macros` (v2). Forward-only migrations in `SqliteDatabase`. |
+| API | Token auth (or a trusted reverse-proxy header), problem details, OpenAPI 3.1 + Scalar `/docs`, WebSocket `/api/events`, sub-path hosting (`PathBase`). |
+| Web UI | React + TS + Vite. Dark by default. Joy-Con controller (neon/graphite), live view, macros, diagnostics, activity. Two columns on desktop, task order on phones. |
+| Tests | 164 passing (49 protocol, 69 core, 46 server). Hardware-independent. |
+| CI | `.github/workflows/ci.yml`: build, `dotnet format`, tests, web format + build, publish matrix, Bookworm arm64 smoke test. |
+| Packaging | `scripts/package.sh`, `deploy/install.sh` (`--port`), hardened `deploy/systemd/nxhub.service`. |
+
+### Verified on real hardware
+
+See `docs/HARDWARE-VALIDATION.md` for details.
+
+- Raspberry Pi 5, Debian 12 arm64: install, hardened service, about 80 MB RSS.
+- A real Switch with sys-botbase 2.41: connect, system check READY (latency about 50 ms), and D-pad,
+  HOME (hold) and B inputs confirmed on the console.
+
+### Not verified yet
+
+- Live view (`pixelPeek`) and macros on a real console.
+- sys-botbase-cpp on hardware; remaining ⚠ markers in `docs/PROTOCOL.md`.
+- Long-running stability, Wi-Fi behaviour, mDNS.
+
+## Key decisions (with reasons)
+
+1. **Stack: .NET 10 / ASP.NET Core minimal APIs / SQLite / React + TS + Vite.** Good arm64 support, low
+   memory with workstation GC, and a self-contained deploy needs no runtime install on the Pi.
+2. **Licence: Apache-2.0.** Permissive, explicit patent grant, GPLv3-compatible for the future
+   Pokémon service. See `docs/LICENSING-RESEARCH.md`.
+3. **Independent protocol implementation.** sys-botbase is GPL-3.0 and SysBot.NET is AGPL-3.0; no
+   code from them (or their forks) is used.
+4. **Always send `\r\n`.** sys-botbase-cpp requires it; 2.x tolerates it.
+5. **Timeout ⇒ discard the connection.** There are no request IDs, so a late response would mis-pair.
+   That is also why screenshot captures never use a viewer's cancellation token.
+6. **NX Hub is the only client per Switch.** sys-botbase-cpp accepts one client. Diagnostics reuse the session.
+7. **No memory (peek/poke) API in Core yet.** It needs a capability and permission design first.
+8. **Controller safety model**: watchdogs, release in `finally`, neutralise on reconnect, and macros
+   release on end. See ARCHITECTURE §4 and §8.
+9. **Explicit press/release, not `click`.** `click` uses a global module setting and blocks the module's loop.
+10. **API naming: `/api/switches`.** Opaque ids: `sw_…`, `mc_…`.
+11. **WebSocket auth by first message.** Tokens never go in URLs. Plain WebSocket JSON, not SignalR.
+12. **Auth: a single admin token**, or a reverse proxy's user header trusted from loopback only, with
+    same-origin checks because that path is cookie-backed. Users and roles come later.
+13. **Installer is local-only.** No `curl | bash` until releases are signed.
+14. **The Pokémon Toolkit will be a separate GPL-3.0 service** using PKHeX.Core behind a generic
+    plugin/service API. Process separation is for engineering and clarity; it is not treated as a
+    licence loophole.
+15. **The demo never shows visitor text.** It refuses saving and renames one-off macros, because
+    everyone who opens it shares it.
+
+## How to build and test
+
+See `docs/DEVELOPMENT.md`.
+
+```bash
+(cd web && npm ci && npm run format:check && npm run build)
+dotnet test NxHub.slnx
+dotnet format NxHub.slnx --verify-no-changes
+scripts/package.sh linux-arm64
+```
+
+## Gotchas
+
+- `wwwroot/` is generated by the web build and gitignored. Without it the server serves a placeholder page.
+- `ThrowOnBadRequest = true` is required so JSON binding errors become problem details.
+- `SwitchSession` uses `TimeProvider` everywhere; tests use `FakeTimeProvider` with `AdvanceUntilAsync`.
+  The client's socket timeouts are real time, so tests use short ones.
+- `SysBotSimulator` is a test double modelled on reading the upstream source. Passing against it proves nothing about hardware.
+- On minimal Debian the binary aborts without `libssl3` (`install.sh` checks for it).
+- The server references the simulator project, for demo mode only.
+- The web UI uses relative URLs (`base: "./"`), so it works at `/` and under a proxy sub-path.
+
+## Next steps
+
+1. Hardware: live view and a recorded macro on a real console, then sys-botbase-cpp. Update
+   `docs/HARDWARE-VALIDATION.md` and the README status.
+2. Macros: schedules, conditions and variables, and tick-precise playback (`cq*`) on sys-botbase-cpp.
+3. Plugin runtime: `NxHub.Plugins.Abstractions`, in-process loading, and an out-of-process service contract.
+4. SDKs (Python, and TypeScript generated from OpenAPI), a Home Assistant integration, mDNS, signed releases.
+5. Later: users/roles and scoped API keys, an audit log, the USB transport, and the Pokémon Toolkit service.

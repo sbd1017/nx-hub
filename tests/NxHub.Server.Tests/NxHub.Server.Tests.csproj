@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\NxHub.Server\NxHub.Server.csproj" />
+    <ProjectReference Include="..\..\src\NxHub.Simulator\NxHub.Simulator.csproj" />
+  </ItemGroup>
+</Project>

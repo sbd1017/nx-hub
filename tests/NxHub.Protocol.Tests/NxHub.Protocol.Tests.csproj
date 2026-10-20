@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\NxHub.Protocol\NxHub.Protocol.csproj" />
+    <ProjectReference Include="..\..\src\NxHub.Simulator\NxHub.Simulator.csproj" />
+  </ItemGroup>
+</Project>

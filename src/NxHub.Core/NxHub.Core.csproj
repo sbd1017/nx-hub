@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Game-agnostic NX Hub core: devices, sessions, controller, diagnostics and events.</Description>
+    <RootNamespace>NxHub.Core</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NxHub.Protocol\NxHub.Protocol.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="NxHub.Core.Tests" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <Description>A sys-botbase protocol simulator for development and tests. It is not a Switch.</Description>
+    <RootNamespace>NxHub.Simulator</RootNamespace>
+    <AssemblyName>nxhub-simulator</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- ffmpeg testsrc2 frame, 1280x720, served by pixelPeek. -->
+    <EmbeddedResource Include="Assets\screen.jpg" LogicalName="NxHub.Simulator.screen.jpg" />
+    <!-- Demo mode: a pretend HOME menu (home-N = tile N selected) and a pretend game per tile (open-N). -->
+    <EmbeddedResource Include="Assets\demo\*.jpg" LogicalName="NxHub.Simulator.demo.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

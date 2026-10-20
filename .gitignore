@@ -1,0 +1,33 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+artifacts/
+publish/
+
+# Runtime data (never commit device configuration or tokens)
+data/
+*.db
+*.db-shm
+*.db-wal
+admin-token
+
+# Web
+node_modules/
+web/dist/
+src/NxHub.Server/wwwroot/
+*.tsbuildinfo
+
+# Local overrides
+appsettings.Local.json
+.env
+.env.*
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json

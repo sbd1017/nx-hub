@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <Description>NX Hub server: REST API, WebSocket events and web UI host.</Description>
+    <RootNamespace>NxHub.Server</RootNamespace>
+    <AssemblyName>nxhub</AssemblyName>
+    <!-- Keep memory modest on a Raspberry Pi: workstation GC, no concurrent background GC thread. -->
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <TieredPGO>true</TieredPGO>
+    <OpenApiGenerateDocuments>false</OpenApiGenerateDocuments>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+    <PackageReference Include="Scalar.AspNetCore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NxHub.Core\NxHub.Core.csproj" />
+    <!-- Used only by demo mode (NxHub:Demo:Enabled), which runs a simulated Switch in-process. -->
+    <ProjectReference Include="..\NxHub.Simulator\NxHub.Simulator.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="NxHub.Server.Tests" />
+  </ItemGroup>
+
+</Project>

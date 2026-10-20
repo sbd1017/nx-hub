@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/NxHub.Protocol/NxHub.Protocol.csproj" />
+    <Project Path="src/NxHub.Core/NxHub.Core.csproj" />
+    <Project Path="src/NxHub.Server/NxHub.Server.csproj" />
+    <Project Path="src/NxHub.Simulator/NxHub.Simulator.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/NxHub.Protocol.Tests/NxHub.Protocol.Tests.csproj" />
+    <Project Path="tests/NxHub.Core.Tests/NxHub.Core.Tests.csproj" />
+    <Project Path="tests/NxHub.Server.Tests/NxHub.Server.Tests.csproj" />
+  </Folder>
+</Solution>
