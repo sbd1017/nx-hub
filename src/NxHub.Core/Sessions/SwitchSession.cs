@@ -25,6 +25,7 @@ public sealed class SwitchSession : IAsyncDisposable
     private readonly IEventPublisher _events;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger _logger;
+    private readonly ILogger<SysBotBaseClient> _clientLogger;
     private readonly TimeProvider _time;
     private readonly AsyncSignal _wake = new();
     private readonly CancellationTokenSource _stop = new();
@@ -63,6 +64,8 @@ public sealed class SwitchSession : IAsyncDisposable
         _events = events;
         _loggerFactory = loggerFactory;
         _logger = loggerFactory.CreateLogger<SwitchSession>();
+        // Created up front: the logger factory may already be disposed if the host stops before the loop runs.
+        _clientLogger = loggerFactory.CreateLogger<SysBotBaseClient>();
         _time = time;
         _stateSince = time.GetUtcNow();
         _autoConnect = device.Enabled;
@@ -344,6 +347,10 @@ public sealed class SwitchSession : IAsyncDisposable
             {
                 // Expected on shutdown.
             }
+            catch (ObjectDisposedException)
+            {
+                // The host tore down shared services first; nothing left to clean up.
+            }
         }
 
         Controller.Dispose();
@@ -354,7 +361,7 @@ public sealed class SwitchSession : IAsyncDisposable
     private async Task RunAsync()
     {
         var stop = _stop.Token;
-        var clientLogger = _loggerFactory.CreateLogger<SysBotBaseClient>();
+        var clientLogger = _clientLogger;
 
         while (!stop.IsCancellationRequested)
         {
