@@ -70,6 +70,25 @@ public sealed class UiOptions
 {
     /// <summary>Web UI theme. Dark by default; <c>Light</c> or <c>System</c> (follow the device) are opt-in.</summary>
     public UiTheme Theme { get; set; } = UiTheme.Dark;
+
+    /// <summary>
+    /// Other pages to link from the top bar, for example a trade bot running beside NX Hub.
+    /// Only site paths (<c>/…</c>) and http(s) URLs are shown.
+    /// </summary>
+    public List<UiLink> Links { get; set; } = [];
+}
+
+public sealed class UiLink
+{
+    /// <summary>Shown in the top bar, for example "Trade bot". When a program holding the Switch uses the same name, its hand-over notice links here too.</summary>
+    public string Name { get; set; } = "";
+
+    public string Url { get; set; } = "";
+
+    public bool IsValid() =>
+        Name.Trim().Length is > 0 and <= 40
+        && ((Url.StartsWith('/') && !Url.StartsWith("//", StringComparison.Ordinal))
+            || (Uri.TryCreate(Url, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp)));
 }
 
 public sealed class AuthOptions

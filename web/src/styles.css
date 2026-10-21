@@ -184,6 +184,32 @@ h3 {
   color: var(--muted);
 }
 
+/* Other pages on this hub (NxHub:Ui:Links), for example a trade bot. */
+.apps {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+
+.chip--app {
+  text-decoration: none;
+  color: var(--text);
+}
+
+.chip--app::after {
+  content: "›";
+  color: var(--muted);
+}
+
+.chip--app:hover {
+  border-color: var(--accent);
+}
+
+.chip--app:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .link {
   font-size: 0.75rem;
   color: var(--muted);

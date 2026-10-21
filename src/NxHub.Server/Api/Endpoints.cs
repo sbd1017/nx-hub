@@ -22,7 +22,14 @@ public static class Endpoints
             .WithTags("System").WithSummary("Liveness check. Does not require authentication.");
 
         api.MapGet("/info", (SwitchManager manager, AccessTokenService auth, IOptions<NxHubOptions> options) =>
-                TypedResults.Ok(new InfoResponse("NX Hub", Version, auth.Enabled, manager.Sessions.Count, options.Value.Ui.Theme, options.Value.Demo.Enabled)))
+                TypedResults.Ok(new InfoResponse(
+                    "NX Hub",
+                    Version,
+                    auth.Enabled,
+                    manager.Sessions.Count,
+                    options.Value.Ui.Theme,
+                    options.Value.Demo.Enabled,
+                    [.. options.Value.Ui.Links.Where(l => l.IsValid()).Select(l => new LinkResponse(l.Name.Trim(), l.Url))])))
             .WithTags("System").WithSummary("Server version and whether a token is required. No authentication.");
 
         var switches = api.MapGroup("/switches")

@@ -4,6 +4,7 @@ import {
   api,
   setToken,
   type ActivityEntry,
+  type AppLink,
   type ControllerSnapshot,
   type DiagnosticReport,
   type Macro,
@@ -36,6 +37,7 @@ export function App() {
   const [toast, setToast] = useState<string | null>(null);
   const [version, setVersion] = useState("");
   const [demo, setDemo] = useState(false);
+  const [links, setLinks] = useState<AppLink[]>([]);
   const [macros, setMacros] = useState<Macro[]>([]);
   const [macroRun, setMacroRun] = useState<MacroRun | null>(null);
   const recorder = useRecorder();
@@ -75,6 +77,7 @@ export function App() {
       .then((info) => {
         setVersion(info.version);
         setDemo(info.demo);
+        setLinks(info.links ?? []);
         // Dark unless this install opted into another theme.
         if (info.theme !== "dark") document.documentElement.dataset.theme = info.theme;
       })
@@ -220,6 +223,15 @@ export function App() {
             </button>
           )}
         </nav>
+        {links.length > 0 && (
+          <nav className="apps" aria-label="Other pages">
+            {links.map((l) => (
+              <a key={l.url} className="chip chip--app" href={l.url}>
+                {l.name}
+              </a>
+            ))}
+          </nav>
+        )}
         <span className={`link link--${link}`} title={`Live updates: ${link}`}>
           {link === "live" ? "Live" : link === "connecting" ? "…" : "Offline"}
         </span>
@@ -275,6 +287,7 @@ export function App() {
                   <StatusCard
                     demo={demo}
                     device={selected}
+                    links={links}
                     busy={busy}
                     onEdit={() => setEditing(true)}
                     onConnect={() => void run(() => api.connect(selected.id))}

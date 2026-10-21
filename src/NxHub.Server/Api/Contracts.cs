@@ -69,4 +69,7 @@ public sealed record MacroRunResponse(NxHub.Core.Macros.MacroRunState? Run);
 
 public sealed record HealthResponse(string Status);
 
-public sealed record InfoResponse(string Name, string Version, bool AuthRequired, int Switches, UiTheme Theme, bool Demo);
+public sealed record InfoResponse(string Name, string Version, bool AuthRequired, int Switches, UiTheme Theme, bool Demo, IReadOnlyList<LinkResponse> Links);
+
+/// <summary>Another page linked from the top bar (<c>NxHub:Ui:Links</c>).</summary>
+public sealed record LinkResponse(string Name, string Url);

@@ -97,6 +97,13 @@ export interface ServerInfo {
   switches: number;
   demo: boolean;
   theme: "dark" | "light" | "system";
+  /** Other pages to link from the top bar (NxHub:Ui:Links). */
+  links: AppLink[];
+}
+
+export interface AppLink {
+  name: string;
+  url: string;
 }
 
 export type MacroStepType = "press" | "hold" | "release" | "stick" | "wait" | "repeat";

@@ -1,5 +1,13 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { ApiError, type ActivityEntry, type CheckStatus, type DiagnosticReport, type SwitchInfo, type SwitchInput } from "../api";
+import {
+  ApiError,
+  type ActivityEntry,
+  type AppLink,
+  type CheckStatus,
+  type DiagnosticReport,
+  type SwitchInfo,
+  type SwitchInput,
+} from "../api";
 
 const STATE_LABEL: Record<string, string> = {
   connected: "Connected",
@@ -40,17 +48,20 @@ const IMPLEMENTATION: Record<string, string> = {
 interface StatusCardProps {
   device: SwitchInfo;
   demo?: boolean;
+  /** Configured pages; a hand-over notice links to the one named after the program holding the Switch. */
+  links?: AppLink[];
   busy: boolean;
   onConnect: () => void;
   onDisconnect: () => void;
   onEdit: () => void;
 }
 
-export function StatusCard({ device, demo = false, busy, onConnect, onDisconnect, onEdit }: StatusCardProps) {
+export function StatusCard({ device, demo = false, links = [], busy, onConnect, onDisconnect, onEdit }: StatusCardProps) {
   const now = useNow();
   const s = device.status;
   const caps = s.capabilities;
   const active = s.state === "connected" || s.state === "connecting" || s.state === "reconnecting";
+  const holderLink = s.lease ? links.find((l) => l.name.toLowerCase() === s.lease!.holder.toLowerCase()) : undefined;
 
   return (
     <section className="card status">
@@ -111,6 +122,12 @@ export function StatusCard({ device, demo = false, busy, onConnect, onDisconnect
       {s.lease && (
         <p className="notice">
           {s.lease.holder} is using this Switch. The controller, macros and live view are paused until it hands the Switch back.
+          {holderLink && (
+            <>
+              {" "}
+              <a href={holderLink.url}>Open {holderLink.name}</a>
+            </>
+          )}
         </p>
       )}
       {s.lastError && s.state !== "connected" && !s.lease && <p className="notice notice--error">{s.lastError.message}</p>}

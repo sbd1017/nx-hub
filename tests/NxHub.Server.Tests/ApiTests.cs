@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.AspNetCore.Hosting;
 using NxHub.Simulator;
 using NxHub.Tests.Shared;
 
@@ -141,6 +142,26 @@ public class ApiTests
 
         await server.Client.PostAsync($"/api/switches/{id}/controller/reset", null);
         await Eventually.TrueAsync(() => !sim.ControllerAttached, "controller detached");
+    }
+
+    [Fact]
+    public async Task Configured_links_are_listed_and_unsafe_ones_dropped()
+    {
+        await using var server = new ServerFixture(configure: web =>
+        {
+            web.UseSetting("NxHub:Ui:Links:0:Name", "Trade bot");
+            web.UseSetting("NxHub:Ui:Links:0:Url", "/nxhub/trade/");
+            web.UseSetting("NxHub:Ui:Links:1:Name", "Bad");
+            web.UseSetting("NxHub:Ui:Links:1:Url", "javascript:alert(1)");
+            web.UseSetting("NxHub:Ui:Links:2:Name", "Elsewhere");
+            web.UseSetting("NxHub:Ui:Links:2:Url", "//example.com/");
+        });
+
+        var info = await server.Client.GetFromJsonAsync<JsonElement>("/api/info");
+
+        var link = Assert.Single(info.GetProperty("links").EnumerateArray());
+        Assert.Equal("Trade bot", link.GetProperty("name").GetString());
+        Assert.Equal("/nxhub/trade/", link.GetProperty("url").GetString());
     }
 
     [Fact]
