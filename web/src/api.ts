@@ -56,6 +56,8 @@ export interface SwitchStatus {
   lastError: { message: string; code: string | null; at: string } | null;
   latency: { lastMs: number; averageMs: number; measuredAt: string } | null;
   capabilities: Capabilities | null;
+  /** Set while another program (for example a trade bot) has the Switch. */
+  lease: { holder: string; acquiredAt: string; expiresAt: string } | null;
   controller: ControllerSnapshot;
 }
 

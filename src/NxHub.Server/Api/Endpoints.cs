@@ -69,6 +69,35 @@ public static class Endpoints
                 TypedResults.Ok(await manager.GetSession(id).DisconnectAsync(ct)))
             .WithSummary("Release held inputs and disconnect. Auto-connect stays off until the next connect or restart.");
 
+        switches.MapPost("/{id}/lease", async (string id, LeaseRequest request, SwitchManager manager, CancellationToken ct) =>
+            {
+                var holder = request.Holder?.Trim() ?? "";
+                if (holder.Length is 0 or > 64)
+                {
+                    throw new ValidationFailedException("holder", "Name the program taking the Switch (1–64 characters).");
+                }
+
+                var ttl = request.TtlSeconds ?? 60;
+                if (ttl is < 5 or > 3600)
+                {
+                    throw new ValidationFailedException("ttlSeconds", "Use 5 to 3600 seconds.");
+                }
+
+                return TypedResults.Ok(await manager.GetSession(id).AcquireLeaseAsync(holder, TimeSpan.FromSeconds(ttl), ct));
+            })
+            .WithTags("Hand-over")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .WithSummary("Hand the Switch over to another program, for example a trade bot. NX Hub releases inputs, disconnects and refuses input until the lease is released or expires. Call again to renew.");
+
+        switches.MapDelete("/{id}/lease", async (string id, SwitchManager manager) =>
+            {
+                await manager.GetSession(id).ReleaseLeaseAsync();
+                return TypedResults.NoContent();
+            })
+            .WithTags("Hand-over")
+            .WithSummary("Take the Switch back. NX Hub reconnects if it was connected before the hand-over.");
+
         switches.MapGet("/{id}/activity", (string id, int? limit, SwitchManager manager) =>
                 TypedResults.Ok(manager.GetSession(id).Activity.GetRecent(limit ?? 50)))
             .WithSummary("Recent human-readable activity, newest first.");
@@ -197,6 +226,7 @@ public static class Endpoints
         runs.MapPost("/run", async (string id, RunMacroRequest request, SwitchManager manager, MacroLibrary library, IOptions<NxHubOptions> options, CancellationToken ct) =>
             {
                 var session = manager.GetSession(id);
+                session.ThrowIfLeased();
                 if (options.Value.Demo.Enabled && request.Macro is { } inline)
                 {
                     // Visitor-written names would be shown to everyone on the public demo.
@@ -229,6 +259,8 @@ public static class Endpoints
         diagnostics.MapPost("/", async (string id, DiagnosticsRequest? request, SwitchManager manager, CancellationToken ct) =>
             {
                 var session = manager.GetSession(id);
+                // The check opens its own connections to the Switch, which would disturb the program holding it.
+                session.ThrowIfLeased();
                 var options = new DiagnosticOptions { IncludeControllerTest = request?.IncludeControllerTest ?? false };
                 return TypedResults.Ok(await manager.Diagnostics.RunAsync(session, options, ct));
             })

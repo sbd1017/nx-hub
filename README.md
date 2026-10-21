@@ -138,7 +138,8 @@ Interactive reference at `/docs` on your NX Hub. Guide with every endpoint and e
 - Hardware validation of live view, macros and sys-botbase-cpp
 - Scheduled macros, conditions and variables; tick-precise playback on sys-botbase-cpp
 - Plugin runtime (in-process and out-of-process)
-- **Pokémon Toolkit** as a separate GPL-3.0 service built on PKHeX.Core: live boxes, legality, Living Dex, collection manifests
+- **Pokémon trade bot** in its own repository, [nx-hub-pokemon](https://github.com/sbd1017/nx-hub-pokemon) (AGPL-3.0, built on SysBot.NET): a web queue for link trades and a trainer-info lookup, using NX Hub's hand-over API
+- More Pokémon tools there later: live boxes, legality checks, Living Dex, collection manifests
 - Python and TypeScript SDKs, Home Assistant integration, mDNS discovery, signed releases
 
 ## Safety and legality

@@ -40,6 +40,7 @@ The token is generated on first start into `<data dir>/admin-token` (on a Pi:
 | 401 | `unauthorized` | Missing or wrong token. |
 | 404 | `switch_not_found`, `no_diagnostics`, `not_found` | |
 | 409 | `switch_not_connected` | Connect first. |
+| 409 | `switch_leased` | The Switch is handed over to another program (see Hand-over). |
 | 409 | `diagnostics_in_progress` | One run per Switch at a time. |
 | 409 | `macro_running`, `macro_not_running` | One macro per Switch at a time. |
 | 404 | `macro_not_found` | |
@@ -61,6 +62,8 @@ The token is generated on first start into `<data dir>/admin-token` (on a Pi:
 | GET | `/api/switches/{id}/status` | Connection state, latency, capabilities, held inputs. |
 | POST | `/api/switches/{id}/connect` | Start (and keep) connecting. Waits up to 10 s for the attempt. |
 | POST | `/api/switches/{id}/disconnect` | Release held inputs, disconnect, stop auto-connect. |
+| POST | `/api/switches/{id}/lease` | `{holder, ttlSeconds?}`: hand the Switch over to another program. Call again to renew. |
+| DELETE | `/api/switches/{id}/lease` | Take the Switch back. |
 | GET | `/api/switches/{id}/activity?limit=50` | Human-readable recent activity. |
 | GET | `/api/switches/{id}/controller` | Held buttons and stick positions. |
 | POST | `/api/switches/{id}/controller/press` | `{button, durationMs?}`: press then release. Returns after the release. |
@@ -175,6 +178,24 @@ cost the Switch one capture at a time. Response headers: `X-Frame-Sequence`, `X-
 `X-Capture-Ms`. Capturing blocks sys-botbase briefly, so button input can lag a little while live view
 is on. Some consoles return no image (upstream notes the debug-unit flag); you get
 `422 screenshot_unavailable` and everything else keeps working.
+
+## Hand-over
+
+Another program that talks to sys-botbase itself (for example a trade bot) can ask NX Hub to step
+aside, so the two never press buttons over each other:
+
+```bash
+curl -X POST "$HUB/api/switches/$SW/lease" -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' -d '{"holder":"Trade bot","ttlSeconds":60}'
+```
+
+NX Hub stops any macro, releases held inputs and disconnects. Until the lease ends, controller,
+macro, live view, connect and diagnostics requests get `409 switch_leased`, and the status shows
+`lease: {holder, acquiredAt, expiresAt}`. The holder renews by sending the same request again
+(a different holder gets `409`). The lease ends with `DELETE /api/switches/{id}/lease`, or by
+itself `ttlSeconds` after the last renewal, so a crashed program can't keep the Switch. NX Hub then
+reconnects if it was connected before. [nx-hub-pokemon](https://github.com/sbd1017/nx-hub-pokemon)
+uses this.
 
 ## Events
 

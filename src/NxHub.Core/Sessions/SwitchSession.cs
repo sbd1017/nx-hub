@@ -48,6 +48,9 @@ public sealed class SwitchSession : IAsyncDisposable
     private DateTimeOffset _lastQueryAt;
     private TaskCompletionSource<bool> _attemptCompleted = NewAttemptSource();
     private TaskCompletionSource _stateChanged = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private SwitchLease? _lease;
+    private bool _resumeAfterLease;
+    private ITimer? _leaseTimer;
     private int _disposed;
 
     public SwitchSession(
@@ -142,6 +145,7 @@ public sealed class SwitchSession : IAsyncDisposable
         Task<bool> attempt;
         lock (_gate)
         {
+            ThrowIfLeasedLocked();
             if (_state == ConnectionState.Connected)
             {
                 _autoConnect = true;
@@ -167,7 +171,112 @@ public sealed class SwitchSession : IAsyncDisposable
     }
 
     /// <summary>Stops auto-connect, releases held inputs (best effort) and closes the connection.</summary>
-    public async Task<SwitchStatus> DisconnectAsync(CancellationToken cancellationToken)
+    public Task<SwitchStatus> DisconnectAsync(CancellationToken cancellationToken)
+    {
+        lock (_gate)
+        {
+            // Stay disconnected after a hand-over ends, too.
+            _resumeAfterLease = false;
+        }
+
+        return DisconnectCoreAsync("Disconnect requested.", cancellationToken);
+    }
+
+    /// <summary>
+    /// Hands the Switch over to another program (for example a trade bot): stops any macro, releases
+    /// held inputs, disconnects and refuses input until <see cref="ReleaseLeaseAsync"/> or until
+    /// <paramref name="ttl"/> passes without a renewal. The same holder calls this again to renew.
+    /// </summary>
+    public async Task<SwitchLease> AcquireLeaseAsync(string holder, TimeSpan ttl, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(holder);
+        SwitchLease lease;
+        bool isNew;
+        lock (_gate)
+        {
+            if (_lease is { } current && !string.Equals(current.Holder, holder, StringComparison.Ordinal))
+            {
+                throw Errors.Errors.Leased(_device.Name, current.Holder);
+            }
+
+            var now = _time.GetUtcNow();
+            isNew = _lease is null;
+            if (isNew)
+            {
+                _resumeAfterLease = _autoConnect;
+            }
+
+            lease = new SwitchLease(holder, _lease?.AcquiredAt ?? now, now + ttl);
+            _lease = lease;
+            _leaseTimer ??= _time.CreateTimer(_ => _ = EndLeaseAsync(expired: true), null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+            _leaseTimer.Change(ttl, Timeout.InfiniteTimeSpan);
+        }
+
+        if (isNew)
+        {
+            await DisconnectCoreAsync($"Handed over to {holder}. Controller, macros and live view are paused until it hands the Switch back.", cancellationToken).ConfigureAwait(false);
+        }
+
+        PublishState();
+        return lease;
+    }
+
+    /// <summary>Takes the Switch back from the lease holder and reconnects if NX Hub was connected before.</summary>
+    public Task ReleaseLeaseAsync() => EndLeaseAsync(expired: false);
+
+    /// <summary>Throws <c>switch_leased</c> while another program has the Switch.</summary>
+    public void ThrowIfLeased()
+    {
+        lock (_gate)
+        {
+            ThrowIfLeasedLocked();
+        }
+    }
+
+    private Task EndLeaseAsync(bool expired)
+    {
+        SwitchLease? ended;
+        bool resume;
+        lock (_gate)
+        {
+            ended = _lease;
+            // A renewal can race the expiry timer; only expire a lease that really ran out.
+            if (ended is null || (expired && ended.ExpiresAt > _time.GetUtcNow()))
+            {
+                return Task.CompletedTask;
+            }
+
+            _lease = null;
+            _leaseTimer?.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+            resume = _resumeAfterLease;
+            if (resume)
+            {
+                _autoConnect = true;
+            }
+        }
+
+        LogEvent(
+            expired ? ActivityLevel.Warning : ActivityLevel.Info,
+            ActivityCategory.Connection,
+            expired ? $"{ended.Holder} stopped renewing its hand-over; NX Hub has the Switch back." : $"{ended.Holder} handed the Switch back.");
+        if (resume)
+        {
+            _wake.Set();
+        }
+
+        PublishState();
+        return Task.CompletedTask;
+    }
+
+    private void ThrowIfLeasedLocked()
+    {
+        if (_lease is { } lease)
+        {
+            throw Errors.Errors.Leased(_device.Name, lease.Holder);
+        }
+    }
+
+    private async Task<SwitchStatus> DisconnectCoreAsync(string reason, CancellationToken cancellationToken)
     {
         ActiveConnection? active;
         lock (_gate)
@@ -186,7 +295,7 @@ public sealed class SwitchSession : IAsyncDisposable
         }
 
         PublishState();
-        LogEvent(ActivityLevel.Info, ActivityCategory.Connection, "Disconnect requested.");
+        LogEvent(ActivityLevel.Info, ActivityCategory.Connection, reason);
         await Macros.StopAsync().ConfigureAwait(false);
         if (active is not null)
         {
@@ -210,6 +319,12 @@ public sealed class SwitchSession : IAsyncDisposable
             endpointChanged = _device.Endpoint != updated.Endpoint;
             _device = updated;
             active = _active;
+            if (_lease is not null)
+            {
+                // Handed over: remember the choice and apply it when the Switch comes back.
+                _resumeAfterLease = updated.Enabled;
+                return;
+            }
         }
 
         if (!updated.Enabled)
@@ -243,6 +358,7 @@ public sealed class SwitchSession : IAsyncDisposable
         string name;
         lock (_gate)
         {
+            ThrowIfLeasedLocked();
             connection = _state == ConnectionState.Connected ? _active : null;
             name = _device.Name;
         }
@@ -355,6 +471,7 @@ public sealed class SwitchSession : IAsyncDisposable
 
         Controller.Dispose();
         Macros.Dispose();
+        _leaseTimer?.Dispose();
         _stop.Dispose();
     }
 
@@ -714,6 +831,7 @@ public sealed class SwitchSession : IAsyncDisposable
         LastError = _lastError,
         Latency = _latency,
         Capabilities = _state == ConnectionState.Connected ? _capabilities : null,
+        Lease = _lease,
         Controller = Controller.GetSnapshot(),
     };
 

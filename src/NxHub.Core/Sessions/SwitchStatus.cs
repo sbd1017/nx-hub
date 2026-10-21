@@ -25,6 +25,12 @@ public sealed record LatencyStats(double LastMs, double AverageMs, DateTimeOffse
 
 public sealed record ConnectionError(string Message, string? Code, DateTimeOffset At);
 
+/// <summary>
+/// Another program (for example a trade bot) has the Switch. NX Hub stays disconnected and refuses
+/// input until the holder releases it or stops renewing it before <see cref="ExpiresAt"/>.
+/// </summary>
+public sealed record SwitchLease(string Holder, DateTimeOffset AcquiredAt, DateTimeOffset ExpiresAt);
+
 public sealed record ControllerSnapshot(
     IReadOnlyList<SwitchButton> HeldButtons,
     IReadOnlyDictionary<SwitchStick, StickPosition> Sticks,
@@ -61,6 +67,9 @@ public sealed record SwitchStatus
     public LatencyStats? Latency { get; init; }
 
     public SysBotCapabilities? Capabilities { get; init; }
+
+    /// <summary>Set while the Switch is handed over to another program.</summary>
+    public SwitchLease? Lease { get; init; }
 
     public required ControllerSnapshot Controller { get; init; }
 }

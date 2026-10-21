@@ -64,11 +64,13 @@ See `docs/HARDWARE-VALIDATION.md` for details.
 12. **Auth: a single admin token**, or a reverse proxy's user header trusted from loopback only, with
     same-origin checks because that path is cookie-backed. Users and roles come later.
 13. **Installer is local-only.** No `curl | bash` until releases are signed.
-14. **The Pokémon Toolkit will be a separate GPL-3.0 service** using PKHeX.Core behind a generic
-    plugin/service API. Process separation is for engineering and clarity; it is not treated as a
-    licence loophole.
+14. **Pokémon features live in a separate repository**, `nx-hub-pokemon` (AGPL-3.0, built on
+    SysBot.NET and PKHeX.Core). Core stays Apache-2.0 and game-agnostic. Process separation is for
+    engineering and clarity; it is not treated as a licence loophole.
 15. **The demo never shows visitor text.** It refuses saving and renames one-off macros, because
     everyone who opens it shares it.
+16. **Hand-over is a lease, not shared access.** Another program that drives sys-botbase (the trade
+    bot) leases the Switch; NX Hub disconnects and refuses input until it is released or expires.
 
 ## How to build and test
 
@@ -99,4 +101,4 @@ scripts/package.sh linux-arm64
 2. Macros: schedules, conditions and variables, and tick-precise playback (`cq*`) on sys-botbase-cpp.
 3. Plugin runtime: `NxHub.Plugins.Abstractions`, in-process loading, and an out-of-process service contract.
 4. SDKs (Python, and TypeScript generated from OpenAPI), a Home Assistant integration, mDNS, signed releases.
-5. Later: users/roles and scoped API keys, an audit log, the USB transport, and the Pokémon Toolkit service.
+5. Later: users/roles and scoped API keys, an audit log, the USB transport, and more Pokémon tools in `nx-hub-pokemon`.

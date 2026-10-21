@@ -7,7 +7,7 @@
     },
     "servers": [
         {
-            "url": "http://localhost:8091/"
+            "url": "http://127.0.0.1:8099/"
         }
     ],
     "paths": {
@@ -517,6 +517,137 @@
                                 }
                             }
                         }
+                    }
+                }
+            }
+        },
+        "/api/switches/{id}/lease": {
+            "post": {
+                "tags": [
+                    "Hand-over"
+                ],
+                "summary": "Hand the Switch over to another program, for example a trade bot. NX Hub releases inputs, disconnects and refuses input until the lease is released or expires. Call again to renew.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LeaseRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "400": {
+                        "description": "Bad Request",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwitchLease"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Hand-over"
+                ],
+                "summary": "Take the Switch back. NX Hub reconnects if it was connected before the hand-over.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "400": {
+                        "description": "Bad Request",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProblemDetails"
+                                }
+                            }
+                        }
+                    },
+                    "204": {
+                        "description": "No Content"
                     }
                 }
             }
@@ -2605,6 +2736,32 @@
                     }
                 }
             },
+            "LeaseRequest": {
+                "required": [
+                    "holder",
+                    "ttlSeconds"
+                ],
+                "type": "object",
+                "properties": {
+                    "holder": {
+                        "type": [
+                            "null",
+                            "string"
+                        ],
+                        "description": "Who is taking the Switch, shown in NX Hub (for example \"Trade bot\"). 1\u201364 characters."
+                    },
+                    "ttlSeconds": {
+                        "pattern": "^-?(?:0|[1-9]\\d*)$",
+                        "type": [
+                            "null",
+                            "integer",
+                            "string"
+                        ],
+                        "description": "The lease ends this many seconds after the last renewal unless renewed. Default 60, range 5\u20133600.",
+                        "format": "int32"
+                    }
+                }
+            },
             "Macro": {
                 "required": [
                     "id",
@@ -3118,6 +3275,27 @@
                     "rightStick"
                 ]
             },
+            "SwitchLease": {
+                "required": [
+                    "holder",
+                    "acquiredAt",
+                    "expiresAt"
+                ],
+                "type": "object",
+                "properties": {
+                    "holder": {
+                        "type": "string"
+                    },
+                    "acquiredAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "expiresAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
+            },
             "SwitchRequest": {
                 "required": [
                     "name",
@@ -3304,6 +3482,16 @@
                             }
                         ]
                     },
+                    "lease": {
+                        "oneOf": [
+                            {
+                                "type": "null"
+                            },
+                            {
+                                "$ref": "#/components/schemas/SwitchLease"
+                            }
+                        ]
+                    },
                     "controller": {
                         "$ref": "#/components/schemas/ControllerSnapshot"
                     }
@@ -3407,6 +3595,9 @@
         },
         {
             "name": "Switches"
+        },
+        {
+            "name": "Hand-over"
         },
         {
             "name": "Screen"

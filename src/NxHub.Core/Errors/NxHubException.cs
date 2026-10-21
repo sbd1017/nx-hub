@@ -68,6 +68,9 @@ public static class Errors
     public static NxHubException SwitchNotFound(string id) =>
         new(ErrorKind.NotFound, "switch_not_found", $"No Switch with id '{id}' exists.");
 
+    public static NxHubException Leased(string name, string holder) =>
+        new(ErrorKind.Conflict, "switch_leased", $"'{name}' is handed over to {holder}. It comes back when {holder} releases it.");
+
     public static NxHubException NotConnected(string name) =>
         new(ErrorKind.NotConnected, "switch_not_connected", $"'{name}' is not connected. Connect it first.");
 

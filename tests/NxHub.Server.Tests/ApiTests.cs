@@ -143,6 +143,38 @@ public class ApiTests
         await Eventually.TrueAsync(() => !sim.ControllerAttached, "controller detached");
     }
 
+    [Fact]
+    public async Task A_hand_over_frees_the_switch_and_refuses_input_until_released()
+    {
+        await using var server = new ServerFixture();
+        var id = await server.AddSimulatorAsync();
+
+        await AssertProblemAsync(
+            await server.Client.PostAsJsonAsync($"/api/switches/{id}/lease", new { holder = "", ttlSeconds = 60 }),
+            HttpStatusCode.BadRequest,
+            "validation_failed");
+
+        var lease = await server.Client.PostAsJsonAsync($"/api/switches/{id}/lease", new { holder = "Trade bot", ttlSeconds = 60 });
+        Assert.Equal(HttpStatusCode.OK, lease.StatusCode);
+        Assert.Equal("Trade bot", (await Json(lease)).GetProperty("holder").GetString());
+        await server.WaitForStateAsync(id, "disconnected");
+        await Eventually.TrueAsync(() => server.Simulator.ConnectedClients == 0, "NX Hub should close its connection to sys-botbase");
+
+        var status = await server.Client.GetFromJsonAsync<JsonElement>($"/api/switches/{id}/status");
+        Assert.Equal("Trade bot", status.GetProperty("lease").GetProperty("holder").GetString());
+        await AssertProblemAsync(
+            await server.Client.PostAsJsonAsync($"/api/switches/{id}/controller/press", new { button = "a" }),
+            HttpStatusCode.Conflict,
+            "switch_leased");
+        await AssertProblemAsync(
+            await server.Client.PostAsJsonAsync($"/api/switches/{id}/lease", new { holder = "Another bot" }),
+            HttpStatusCode.Conflict,
+            "switch_leased");
+
+        Assert.Equal(HttpStatusCode.NoContent, (await server.Client.DeleteAsync($"/api/switches/{id}/lease")).StatusCode);
+        await server.WaitForStateAsync(id, "connected");
+    }
+
     [Theory]
     [InlineData("""{"button":"q"}""", "invalid_request")]
     [InlineData("""{}""", "validation_failed")]

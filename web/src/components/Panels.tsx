@@ -81,7 +81,7 @@ export function StatusCard({ device, demo = false, busy, onConnect, onDisconnect
 
       <div className={`state state--${s.state}`}>
         <StateDot state={s.state} />
-        <span className="state__label">{STATE_LABEL[s.state] ?? s.state}</span>
+        <span className="state__label">{s.lease ? "Handed over" : (STATE_LABEL[s.state] ?? s.state)}</span>
         {s.state === "reconnecting" && s.nextAttemptAt && <span className="muted">· retry {relative(s.nextAttemptAt, now)}</span>}
       </div>
 
@@ -108,7 +108,12 @@ export function StatusCard({ device, demo = false, busy, onConnect, onDisconnect
         </div>
       </dl>
 
-      {s.lastError && s.state !== "connected" && <p className="notice notice--error">{s.lastError.message}</p>}
+      {s.lease && (
+        <p className="notice">
+          {s.lease.holder} is using this Switch. The controller, macros and live view are paused until it hands the Switch back.
+        </p>
+      )}
+      {s.lastError && s.state !== "connected" && !s.lease && <p className="notice notice--error">{s.lastError.message}</p>}
       {caps?.warnings.map((w) => (
         <p key={w} className="notice notice--warn">
           {w}
@@ -125,7 +130,7 @@ export function StatusCard({ device, demo = false, busy, onConnect, onDisconnect
               Disconnect
             </button>
           ) : (
-            <button type="button" className="btn btn--primary" disabled={busy} onClick={onConnect}>
+            <button type="button" className="btn btn--primary" disabled={busy || s.lease !== null} onClick={onConnect}>
               Connect
             </button>
           )}

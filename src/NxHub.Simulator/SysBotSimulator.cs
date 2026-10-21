@@ -131,6 +131,9 @@ public sealed class SysBotSimulator : IAsyncDisposable
     }
 
     /// <summary>Abruptly closes every client connection (simulates Wi-Fi loss or sleep).</summary>
+    /// <summary>Clients currently connected.</summary>
+    public int ConnectedClients => _clients.Count;
+
     public void DisconnectAllClients()
     {
         foreach (var (id, client) in _clients)

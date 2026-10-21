@@ -166,6 +166,12 @@ packages built by `scripts/package.sh` include both.
 
 ## Pokémon Toolkit boundary (future, not Milestone 1)
 
+**Update, October 2026:** the first Pokémon feature is a trade bot built on SysBot.NET, so it lives
+in its own repository, [nx-hub-pokemon](https://github.com/sbd1017/nx-hub-pokemon), licensed
+**AGPL-3.0** as a whole (SysBot.NET is AGPL-3.0; PKHeX.Core is GPL-3.0, which AGPL-3.0 may combine
+with). NX Hub Core still contains and links no SysBot.NET or PKHeX code. The two talk only over
+NX Hub's HTTP API (the hand-over lease), and each keeps its own licence.
+
 The brief proposed:
 
 ```text

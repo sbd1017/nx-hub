@@ -147,7 +147,18 @@ hardware.
 ### 11. Errors
 
 Every API error is RFC 9457 problem details with a stable `code`. Device-originated failures use
-gateway semantics: `502` (connection/protocol) and `504` (timeout). `409` means "not connected".
+gateway semantics: `502` (connection/protocol) and `504` (timeout). `409` means "not connected"
+(or `switch_leased`, see §12).
+
+### 12. Hand-over (leases)
+
+A program that drives sys-botbase itself, such as a trade bot, takes the Switch with
+`POST /api/switches/{id}/lease`. The session stops any macro, releases held inputs (the same path as
+a disconnect) and stays disconnected; `ExecuteAsync`, connect, macro runs and diagnostics throw
+`switch_leased` while the lease is held, so nothing in NX Hub can press a button mid-trade. Leases
+have a time to live and are renewed by the holder; a `TimeProvider` timer ends an unrenewed lease,
+so a crashed holder can't keep the Switch. When a lease ends the session reconnects only if it was
+set to connect before (a disconnect or disabling the Switch during the lease is remembered).
 
 ## Security
 

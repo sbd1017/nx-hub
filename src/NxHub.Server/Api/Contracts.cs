@@ -54,6 +54,10 @@ public sealed record StickRequest(
 public sealed record ReleaseAllRequest(
     [property: Description("Release every button and centre both sticks, not just inputs NX Hub knows are held. Default true.")] bool? Everything);
 
+public sealed record LeaseRequest(
+    [property: Description("Who is taking the Switch, shown in NX Hub (for example \"Trade bot\"). 1–64 characters.")] string? Holder,
+    [property: Description("The lease ends this many seconds after the last renewal unless renewed. Default 60, range 5–3600.")] int? TtlSeconds);
+
 public sealed record DiagnosticsRequest(
     [property: Description("Also send a harmless controller update. Attaches a virtual controller to the Switch.")] bool? IncludeControllerTest);
 
