@@ -14,6 +14,8 @@ public sealed class AccessTokenService
 
     private readonly byte[]? _tokenHash;
     private readonly string? _trustedProxyUserHeader;
+    private readonly string _trustedProxyKeyHeader;
+    private readonly byte[]? _proxyKeyHash;
 
     public AccessTokenService(IOptions<NxHubOptions> options, DataDirectory dataDirectory, ILogger<AccessTokenService> logger)
     {
@@ -21,6 +23,15 @@ public sealed class AccessTokenService
         var auth = options.Value.Auth;
         Enabled = auth.Mode == AuthMode.Token;
         _trustedProxyUserHeader = string.IsNullOrWhiteSpace(auth.TrustedProxyUserHeader) ? null : auth.TrustedProxyUserHeader.Trim();
+        _trustedProxyKeyHeader = string.IsNullOrWhiteSpace(auth.TrustedProxyKeyHeader) ? "X-Site-Proxy-Key" : auth.TrustedProxyKeyHeader.Trim();
+        if (_trustedProxyUserHeader is not null)
+        {
+            var key = LoadProxyKey(auth.TrustedProxyKeyFile)
+                ?? throw new InvalidOperationException(
+                    "NxHub:Auth:TrustedProxyUserHeader needs the proxy's secret: NxHub:Auth:TrustedProxyKeyFile, or a systemd credential named site-proxy-key (32+ characters).");
+            _proxyKeyHash = Hash(key);
+        }
+
         TokenFilePath = Path.Combine(dataDirectory.Path, TokenFileName);
         if (!Enabled)
         {
@@ -57,8 +68,9 @@ public sealed class AccessTokenService
     }
 
     /// <summary>
-    /// True when a trusted reverse proxy on this machine vouches for the user. The proxy must
-    /// overwrite the header on every request (nginx <c>proxy_set_header</c>).
+    /// True when a trusted reverse proxy on this machine vouches for the user: a loopback connection
+    /// carrying the proxy's secret key and the user header. The proxy must overwrite both headers on
+    /// every request (nginx <c>proxy_set_header</c>).
     /// </summary>
     public bool IsTrustedProxyUser(HttpContext context)
     {
@@ -68,8 +80,36 @@ public sealed class AccessTokenService
             return false;
         }
 
+        var keys = context.Request.Headers[_trustedProxyKeyHeader];
+        if (keys.Count != 1 || string.IsNullOrEmpty(keys[0]) || keys[0]!.Length > 512
+            || !CryptographicOperations.FixedTimeEquals(Hash(keys[0]!), _proxyKeyHash))
+        {
+            return false;
+        }
+
         var user = context.Request.Headers[_trustedProxyUserHeader].ToString();
         return user.Length is > 0 and <= 256;
+    }
+
+    /// <summary>The systemd credential <c>site-proxy-key</c>, else the configured file; null if neither holds 32+ characters.</summary>
+    private static string? LoadProxyKey(string? keyFile)
+    {
+        var credentials = Environment.GetEnvironmentVariable("CREDENTIALS_DIRECTORY");
+        foreach (var path in new[] { string.IsNullOrEmpty(credentials) ? null : Path.Combine(credentials, "site-proxy-key"), keyFile })
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            {
+                continue;
+            }
+
+            var key = File.ReadAllText(path).Trim();
+            if (key.Length >= 32)
+            {
+                return key;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>

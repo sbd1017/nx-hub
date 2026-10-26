@@ -12,6 +12,16 @@ namespace NxHub.Server.Tests;
 public class ProxyTests
 {
     private const string UserHeader = "X-Site-User";
+    private const string KeyHeader = "X-Site-Proxy-Key";
+    private static readonly string Key = new('k', 64);
+    private static readonly string KeyFile = WriteKeyFile();
+
+    private static string WriteKeyFile()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"nxhub-proxy-key-{Guid.NewGuid():N}");
+        File.WriteAllText(path, Key + "\n");
+        return path;
+    }
 
     /// <summary>Makes every in-memory request look like it came from a proxy on this machine.</summary>
     private sealed class LoopbackStartupFilter : IStartupFilter
@@ -33,6 +43,7 @@ public class ProxyTests
         if (trustHeader)
         {
             web.UseSetting("NxHub:Auth:TrustedProxyUserHeader", UserHeader);
+            web.UseSetting("NxHub:Auth:TrustedProxyKeyFile", KeyFile);
         }
 
         if (loopback)
@@ -41,10 +52,14 @@ public class ProxyTests
         }
     });
 
-    private static HttpRequestMessage Request(HttpMethod method, string path, string? origin = null, string? fetchSite = null, object? body = null)
+    private static HttpRequestMessage Request(HttpMethod method, string path, string? origin = null, string? fetchSite = null, object? body = null, string? key = null)
     {
         var request = new HttpRequestMessage(method, path);
         request.Headers.Add(UserHeader, "owner");
+        if (key != "")
+        {
+            request.Headers.Add(KeyHeader, key ?? Key);
+        }
         if (origin is not null)
         {
             request.Headers.Add("Origin", origin);
@@ -128,5 +143,44 @@ public class ProxyTests
         var response = await client.SendAsync(Request(HttpMethod.Get, "/nxhub/api/switches"));
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("")]                                   // no key: another process on this machine
+    [InlineData("wrong-key-wrong-key-wrong-key-wrong-key")]
+    public async Task Proxy_user_needs_the_proxy_key(string key)
+    {
+        await using var server = BehindProxy();
+        using var client = server.CreateClient(authenticated: false);
+
+        var response = await client.SendAsync(Request(HttpMethod.Get, "/nxhub/api/switches", key: key));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Proxy_key_header_must_appear_once()
+    {
+        await using var server = BehindProxy();
+        using var client = server.CreateClient(authenticated: false);
+        var request = Request(HttpMethod.Get, "/nxhub/api/switches");
+        request.Headers.Add(KeyHeader, Key);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.SendAsync(request)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Trusting_a_proxy_header_without_a_key_refuses_to_start()
+    {
+        var error = await Assert.ThrowsAnyAsync<Exception>(async () =>
+        {
+            await using var server = new ServerFixture(configure: web =>
+            {
+                web.UseSetting("NxHub:Auth:TrustedProxyUserHeader", UserHeader);
+                web.UseSetting("NxHub:Auth:TrustedProxyKeyFile", "/nonexistent/key");
+            });
+            await server.Client.GetAsync("/api/health");
+        });
+        Assert.Contains("proxy", error.ToString(), StringComparison.OrdinalIgnoreCase);
     }
 }

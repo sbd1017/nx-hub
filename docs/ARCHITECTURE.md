@@ -184,7 +184,8 @@ set to connect before (a disconnect or disabling the Switch during the lease is 
 
 - **Behind a reverse proxy:** NX Hub can run under a sub-path (`PathBase`) and trust a
   proxy-authenticated user header (`TrustedProxyUserHeader`), but only on connections from
-  loopback, so LAN clients cannot spoof it. Because such sessions are cookie-backed, every
+  loopback that also carry the proxy's secret key (`TrustedProxyKeyHeader`, default
+  `X-Site-Proxy-Key`), so neither LAN clients nor other processes on the machine can spoof it. Because such sessions are cookie-backed, every
   state-changing request and the WebSocket must be same-origin, or they get a 403
   `cross_site_request`. `X-Forwarded-Proto` is honoured from loopback only. Example config:
   `deploy/nginx/nxhub-subpath.example.conf`.
@@ -217,7 +218,9 @@ Not implemented in Milestone 1. Intended shape:
 | `NxHub:DataDirectory` | `$STATE_DIRECTORY` or `./data` | SQLite DB and admin token. |
 | `NxHub:Auth:Mode` | `Token` | `Token` or `Disabled`. |
 | `NxHub:Auth:Token` | generated | Fixed token (≥16 chars) instead of the generated one. |
-| `NxHub:Auth:TrustedProxyUserHeader` | off | Header from a reverse proxy that already authenticated the user (e.g. `X-Site-User`). Honoured only from loopback. Changes then also need a same-origin `Origin`/`Sec-Fetch-Site`. |
+| `NxHub:Auth:TrustedProxyUserHeader` | off | Header from a reverse proxy that already authenticated the user (e.g. `X-Site-User`). Honoured only from loopback, with the proxy key. Changes then also need a same-origin `Origin`/`Sec-Fetch-Site`. |
+| `NxHub:Auth:TrustedProxyKeyFile` | none | File with the secret (32+ chars) the proxy sends in `TrustedProxyKeyHeader` on every request. A systemd credential named `site-proxy-key` is used when present. Required with `TrustedProxyUserHeader`: NX Hub refuses to start without it. |
+| `NxHub:Auth:TrustedProxyKeyHeader` | `X-Site-Proxy-Key` | Header carrying that secret. |
 | `NxHub:Ui:Theme` | `Dark` | Web UI theme: `Dark`, `Light`, or `System` (follow the device). There is no in-app toggle. |
 | `NxHub:Ui:Links` | none | Other pages shown in the top bar, each `{Name, Url}` (a site path or http(s) URL), for example the trade bot. A hand-over notice links to the one whose name matches the lease holder. |
 | `NxHub:Demo:Enabled` | `false` | Public demo mode (simulated Switch, read-only, no login). |

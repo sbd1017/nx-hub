@@ -101,9 +101,21 @@ public sealed class AuthOptions
     /// <summary>
     /// Header set by a trusted reverse proxy that has already authenticated the user (for example
     /// <c>X-Site-User</c> from nginx <c>auth_request</c>). Only honoured on connections from the
-    /// loopback address, so LAN clients cannot spoof it. Off when null.
+    /// loopback address, so LAN clients cannot spoof it. Off when null. Requires a proxy key
+    /// (<see cref="TrustedProxyKeyFile"/>): being on loopback alone proves nothing, because any
+    /// process on the machine can connect there.
     /// </summary>
     public string? TrustedProxyUserHeader { get; set; }
+
+    /// <summary>Header in which the reverse proxy sends its secret with every request.</summary>
+    public string TrustedProxyKeyHeader { get; set; } = "X-Site-Proxy-Key";
+
+    /// <summary>
+    /// File holding that secret (at least 32 characters). When systemd provides a credential named
+    /// <c>site-proxy-key</c> (<c>LoadCredential=</c>), that is used instead. Without a key the server
+    /// refuses to start while <see cref="TrustedProxyUserHeader"/> is set.
+    /// </summary>
+    public string? TrustedProxyKeyFile { get; set; }
 }
 
 /// <summary>Operator-tunable session settings, in friendly units.</summary>

@@ -98,7 +98,11 @@ To reach NX Hub as `https://your-site/nxhub/` through an existing nginx (for exa
 fronted by Cloudflare Tunnel), see `deploy/nginx/nxhub-subpath.example.conf` and set
 `NxHub__PathBase=/nxhub` in a drop-in (`sudo systemctl edit nxhub`). If nginx already
 authenticates you, also set `NxHub__Auth__TrustedProxyUserHeader` to the identity header nginx
-overwrites on every request. NX Hub then skips its own token prompt for those requests only.
+overwrites on every request, and give NX Hub the proxy's secret: a random key (`openssl rand -base64 48`)
+in a root-only file, passed with `LoadCredential=site-proxy-key:/etc/nxhub/site-proxy-key` in the same
+drop-in, which nginx also sends as `proxy_set_header X-Site-Proxy-Key "<key>";` from a root-only snippet.
+NX Hub then skips its own token prompt for those requests only (loopback + key + identity header), and
+refuses to start if the header is set without a key.
 
 ## `nxhub.local` (future)
 
