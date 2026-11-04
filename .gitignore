@@ -55,3 +55,6 @@ appsettings.Local.json
 id_rsa*
 id_ed25519*
 .DS_Store
+
+# local state
+var/
