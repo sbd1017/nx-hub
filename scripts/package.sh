@@ -18,8 +18,15 @@ echo "Building web UI..."
 
 echo "Publishing server for $RID..."
 rm -rf "$OUT"
-dotnet publish "$ROOT/src/NxHub.Server" -c Release -r "$RID" --self-contained true -o "$OUT/app"
+# PathMap and no debug info: a release must not embed this machine's folder names
+dotnet publish "$ROOT/src/NxHub.Server" -c Release -r "$RID" --self-contained true -o "$OUT/app" \
+  -p:PathMap="$ROOT=/src" -p:DebugType=none -p:DebugSymbols=false
 rm -f "$OUT/app/"*.pdb
+if grep -rl "$HOME" "$OUT/app" >/dev/null 2>&1; then
+  echo "Refusing to package: the build still contains $HOME:" >&2
+  grep -rl "$HOME" "$OUT/app" >&2
+  exit 1
+fi
 
 cp "$ROOT/deploy/install.sh" "$OUT/install.sh"
 cp "$ROOT/deploy/systemd/nxhub.service" "$OUT/nxhub.service"
