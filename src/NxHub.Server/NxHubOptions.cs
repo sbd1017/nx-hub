@@ -68,7 +68,7 @@ public sealed class DemoOptions
 
 public sealed class UiOptions
 {
-    /// <summary>Web UI theme. Dark by default; <c>Light</c> or <c>System</c> (follow the device) are opt-in.</summary>
+    /// <summary>Kept so older configs still load; the web UI ignores it and is always dark.</summary>
     public UiTheme Theme { get; set; } = UiTheme.Dark;
 
     /// <summary>

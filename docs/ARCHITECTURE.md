@@ -221,7 +221,7 @@ Not implemented in Milestone 1. Intended shape:
 | `NxHub:Auth:TrustedProxyUserHeader` | off | Header from a reverse proxy that already authenticated the user (e.g. `X-Site-User`). Honoured only from loopback, with the proxy key. Changes then also need a same-origin `Origin`/`Sec-Fetch-Site`. |
 | `NxHub:Auth:TrustedProxyKeyFile` | none | File with the secret (32+ chars) the proxy sends in `TrustedProxyKeyHeader` on every request. A systemd credential named `site-proxy-key` is used when present. Required with `TrustedProxyUserHeader`: NX Hub refuses to start without it. |
 | `NxHub:Auth:TrustedProxyKeyHeader` | `X-Site-Proxy-Key` | Header carrying that secret. |
-| `NxHub:Ui:Theme` | `Dark` | Web UI theme: `Dark`, `Light`, or `System` (follow the device). There is no in-app toggle. |
+| `NxHub:Ui:Theme` | `Dark` | Ignored: the web UI is always dark (no light palette, no in-app toggle). Still accepted and reported by `/api/info` so older configs keep working. |
 | `NxHub:Ui:Links` | none | Other pages shown in the top bar, each `{Name, Url}` (a site path or http(s) URL), for example the trade bot. A hand-over notice links to the one whose name matches the lease holder. |
 | `NxHub:Demo:Enabled` | `false` | Public demo mode (simulated Switch, read-only, no login). |
 | `NxHub:PathBase` | off | Serve under a sub-path behind a proxy, e.g. `/nxhub`. Direct access at `/` keeps working. |

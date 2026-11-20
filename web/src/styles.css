@@ -1,6 +1,5 @@
 :root {
-  /* Dark is the default (and there is no in-app toggle). A light palette exists for installs that opt in
-     with NxHub:Ui:Theme = "light" (or "system" to follow the device). */
+  /* Dark only: there is no light palette and no in-app toggle (NxHub:Ui:Theme is ignored). */
   color-scheme: dark;
   --bg: #111317;
   --surface: #1a1d23;
@@ -27,44 +26,6 @@
     sans-serif;
   font-size: 15px;
   line-height: 1.45;
-}
-
-:root[data-theme="light"] {
-  color-scheme: light;
-  --bg: #f4f5f7;
-  --surface: #ffffff;
-  --surface-2: #eef0f3;
-  --border: #dfe2e7;
-  --text: #16181d;
-  --muted: #646b78;
-  --accent: #2f6fde;
-  --ok: #1f9d55;
-  --warn: #c27a00;
-  --bad: #d23c3c;
-  --info: #5b6b85;
-  --pad: #e6e8ec;
-  --pad-active: #2f6fde;
-  --shadow: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 6%);
-}
-
-@media (prefers-color-scheme: light) {
-  :root[data-theme="system"] {
-    color-scheme: light;
-    --bg: #f4f5f7;
-    --surface: #ffffff;
-    --surface-2: #eef0f3;
-    --border: #dfe2e7;
-    --text: #16181d;
-    --muted: #646b78;
-    --accent: #2f6fde;
-    --ok: #1f9d55;
-    --warn: #c27a00;
-    --bad: #d23c3c;
-    --info: #5b6b85;
-    --pad: #e6e8ec;
-    --pad-active: #2f6fde;
-    --shadow: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 6%);
-  }
 }
 
 * {

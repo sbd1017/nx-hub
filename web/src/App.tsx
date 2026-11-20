@@ -78,8 +78,6 @@ export function App() {
         setVersion(info.version);
         setDemo(info.demo);
         setLinks(info.links ?? []);
-        // Dark unless this install opted into another theme.
-        if (info.theme !== "dark") document.documentElement.dataset.theme = info.theme;
       })
       .catch(() => undefined);
     void refresh();
